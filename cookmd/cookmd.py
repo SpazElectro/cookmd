@@ -109,99 +109,100 @@ def parse_cookmd(text: str):
 
         if character == "\n":
             line_number += 1
-        if previous_character == "\n":
-            done = False
-            done_line = False
-            if character == "#":
-                size = len(read_until_exclude(text_left, "#"))
+        if not done:
+            if previous_character == "\n":
+                done = False
+                done_line = False
+                if character == "#":
+                    size = len(read_until_exclude(text_left, "#"))
 
-                output.append(
-                    {"type": "header", "text": line[size:].strip(), "size": size}
-                )
-                done = True
-            elif character == "[":
-                link_text = read_until(text_left, "]")
-
-                output.append(
-                    {
-                        "type": "link",
-                        "text": link_text[1:].strip(),
-                        "link": read_until(text_left[len(link_text) + 2 :], ")"),
-                    }
-                )
-                done = True
-            elif character == "!":
-                if next_character == "[":
-                    image_alt = read_until(line[2:], "]")
+                    output.append(
+                        {"type": "header", "text": line[size:].strip(), "size": size}
+                    )
+                    done = True
+                elif character == "[":
+                    link_text = read_until(text_left, "]")
 
                     output.append(
                         {
-                            "type": "image",
-                            "link": read_until(line[len(image_alt) + 4 :], ")"),
-                            "alt": image_alt,
+                            "type": "link",
+                            "text": link_text[1:].strip(),
+                            "link": read_until(text_left[len(link_text) + 2 :], ")"),
                         }
                     )
                     done = True
-        if character == "<":
-            line = line.strip()
-            if not full_line.endswith(">"):
-                raise CookMDSyntaxError(
-                    'Syntax error: Extension did not end with a ">"'
-                )
+                elif character == "!":
+                    if next_character == "[":
+                        image_alt = read_until(line[2:], "]")
 
-            if line.startswith("<!--"):
-                output.append(
-                    {
-                        "type": "comment",
-                        "text": line[4 : len(read_until(line, "-->")) - 3].strip(),
-                    }
-                )
-
-                done = True
-            else:
-                data = read_until(line[1:], ">")
-                extension = read_until(data, " ")
-                data = parse_extension_data(" ".join(data.split(" ")[1:]))
-
-                if extension == "/recipe":
-                    # this is the END of an extension define
-                    # this only occurs for the recipe as of now
-                    if save_lines:
-                        save_lines = False
-                        output.append({"type": "recipe", "items": saved_lines})
-                elif extension == "recipe":
-                    save_lines = not "</recipe>" in line
-                    recipe_contents = (
-                        line.split("<recipe>")[1].split("</recipe>")[0].strip()
+                        output.append(
+                            {
+                                "type": "image",
+                                "link": read_until(line[len(image_alt) + 4 :], ")"),
+                                "alt": image_alt,
+                            }
+                        )
+                        done = True
+            if character == "<":
+                line = line.strip()
+                if not full_line.endswith(">"):
+                    raise CookMDSyntaxError(
+                        'Syntax error: Extension did not end with a ">"'
                     )
-                    if recipe_contents != "":
-                        recipe_contents_index = 0
-                        amount = 0
 
-                        for item in recipe_contents.split(" "):
-                            if recipe_contents_index % 2 == 0:
-                                if not item.isdigit():
-                                    raise CookMDSyntaxError(
-                                        'Syntax error: <recipe> should be used as such: "<recipe>{amount} {item} 3 milk_cartons</recipe>"'
-                                    )
-
-                                amount = int(item)
-                            else:
-                                saved_lines.append([amount, item])
-                            recipe_contents_index += 1
-
-                        if recipe_contents_index % 2 == 1:
-                            raise CookMDSyntaxError(
-                                "Syntax error: unfinished element in <recipe>"
-                            )
-                    if not save_lines:
-                        output.append({"type": "recipe", "items": saved_lines})
-                else:
+                if line.startswith("<!--"):
                     output.append(
-                        {"type": "extension", "name": extension, "data": data}
+                        {
+                            "type": "comment",
+                            "text": line[4 : len(read_until(line, "-->")) - 3].strip(),
+                        }
                     )
 
-                done = True
+                    done = True
+                else:
+                    data = read_until(line[1:], ">")
+                    extension = read_until(data, " ")
+                    data = parse_extension_data(" ".join(data.split(" ")[1:]))
+
+                    if extension == "/recipe":
+                        # this is the END of an extension define
+                        # this only occurs for the recipe as of now
+                        if save_lines:
+                            save_lines = False
+                            output.append({"type": "recipe", "items": saved_lines})
+                    elif extension == "recipe":
+                        save_lines = not "</recipe>" in line
+                        recipe_contents = (
+                            line.split("<recipe>")[1].split("</recipe>")[0].strip()
+                        )
+                        if recipe_contents != "":
+                            recipe_contents_index = 0
+                            amount = 0
+
+                            for item in recipe_contents.split(" "):
+                                if recipe_contents_index % 2 == 0:
+                                    if not item.isdigit():
+                                        raise CookMDSyntaxError(
+                                            'Syntax error: <recipe> should be used as such: "<recipe>{amount} {item} 3 milk_cartons</recipe>"'
+                                        )
+
+                                    amount = int(item)
+                                else:
+                                    saved_lines.append([amount, item])
+                                recipe_contents_index += 1
+
+                            if recipe_contents_index % 2 == 1:
+                                raise CookMDSyntaxError(
+                                    "Syntax error: unfinished element in <recipe>"
+                                )
+                        if not save_lines:
+                            output.append({"type": "recipe", "items": saved_lines})
+                    else:
+                        output.append(
+                            {"type": "extension", "name": extension, "data": data}
+                        )
+
+                    done = True
         if not done and not done_line and not save_lines:
             if full_line.strip() != "":
                 output.append({"type": "text", "text": full_line.strip()})

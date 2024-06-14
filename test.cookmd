@@ -2,8 +2,8 @@
 
 <!-- This is a comment -->
 <!-- define custom items-->
-<item id="egg" name="Egg" image="egg.png">
-<test name="value with a \"good\" thing">
+<item id="egg" name="Egg" image="./default/egg.png">
+<!-- <test name="value with a \"good\" thing"> -->
 
 #This **should** work
 
@@ -15,13 +15,14 @@
 
 [Google](https://www.google.com)
 
-![Egg](egg.png)
+![Egg](./default/egg.png)
 
 This is just some random text!
 Wowza!
 
 <recipe>
-    5 egg
+    3 egg
     3 sugar
     1 milk
 </recipe>
+ 
