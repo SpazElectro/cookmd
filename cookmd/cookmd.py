@@ -1,9 +1,9 @@
-# TODO add more ways to trigger this such as not closing extensions or
-# extension data and many other ways
+# TODO add more ways to trigger this
 class CookMDSyntaxError(RuntimeError):
     pass
 
 
+# read_until("epic gaming >", ">") -> "epic gaming "
 def read_until(text, seperator) -> str:
     out = ""
     for x in text:
@@ -13,6 +13,17 @@ def read_until(text, seperator) -> str:
     return out
 
 
+# read_until_exclude("##hey", "#") -> "hey"
+def read_until_exclude(text, exclude) -> str:
+    out = ""
+    for x in text:
+        if x != exclude:
+            break
+        out += x
+    return out
+
+
+# read_until_next_line("hey!\nwhat's up!") -> "hey!"
 def read_until_next_line(text) -> str:
     return read_until(text, "\n")
 
@@ -26,24 +37,39 @@ def parse_extension_data(data: str) -> dict[str, str]:
     instr = False
     name = ""
     value = ""
+    string_character = ""
+    previous_character = ""
 
     for char in data:
         if char == "=":
             ineq = True
             continue
-        if char == '"' or char == "'":
-            instr = not instr
-            if ineq and not instr:
-                output[name.strip()] = value.strip()
-                name = ""
-                value = ""
-                ineq = False
-                instr = False
-            continue
-        if ineq:
-            value += char
-        else:
-            name += char
+        if (char == '"' or char == "'") and previous_character != "\\":
+            if string_character == "":
+                string_character = char
+            if char == string_character:
+                instr = not instr
+                if ineq and not instr:
+                    output[name.strip()] = value.strip()
+                    name = ""
+                    value = ""
+                    ineq = False
+                    instr = False
+                if not instr:
+                    string_character = ""
+                continue
+        
+        if char != "\\":
+            if ineq:
+                value += char
+            else:
+                name += char
+        previous_character = char
+
+    if name != "" or value != "":
+        raise CookMDSyntaxError(
+            'Syntax error: Extension data is incorrect! example usage: <element name="abc"> (quotes are mandatory!)'
+        )
 
     return output
 
@@ -87,7 +113,7 @@ def parse_cookmd(text: str):
             done = False
             done_line = False
             if character == "#":
-                size = len(read_until(text_left, " "))
+                size = len(read_until_exclude(text_left, "#"))
 
                 output.append(
                     {"type": "header", "text": line[size:].strip(), "size": size}
@@ -116,8 +142,12 @@ def parse_cookmd(text: str):
                         }
                     )
                     done = True
-        if character == "<" and full_line.endswith(">"):
+        if character == "<":
             line = line.strip()
+            if not full_line.endswith(">"):
+                raise CookMDSyntaxError(
+                    'Syntax error: Extension did not end with a ">"'
+                )
 
             if line.startswith("<!--"):
                 output.append(
@@ -159,10 +189,10 @@ def parse_cookmd(text: str):
                             else:
                                 saved_lines.append([amount, item])
                             recipe_contents_index += 1
-                        
+
                         if recipe_contents_index % 2 == 1:
                             raise CookMDSyntaxError(
-                                'Syntax error: unfinished element in <recipe>'
+                                "Syntax error: unfinished element in <recipe>"
                             )
                     if not save_lines:
                         output.append({"type": "recipe", "items": saved_lines})
@@ -180,9 +210,7 @@ def parse_cookmd(text: str):
         character_index += 1
 
     if save_lines:
-        raise CookMDSyntaxError(
-            'Syntax error: <recipe> was not closed!'
-        )
+        raise CookMDSyntaxError("Syntax error: <recipe> was not closed!")
 
     return output
 
