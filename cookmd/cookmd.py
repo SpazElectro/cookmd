@@ -215,7 +215,7 @@ def parse_cookmd(text: str):
     return output
 
 
-if __name__ == "__main__":
+def _main():
     import timeit
 
     cook = open("test.cookmd").read()
@@ -224,3 +224,7 @@ if __name__ == "__main__":
 
     print(f"Parsed file in {timeit.timeit()}s!")
     open("parsed.json", "w").write(__import__("json").dumps(parsed, indent=4))
+
+
+if __name__ == "__main__":
+    _main()
