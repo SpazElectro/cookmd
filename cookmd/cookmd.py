@@ -4,7 +4,7 @@ class CookMDSyntaxError(RuntimeError):
     pass
 
 
-def read_until(text, seperator):
+def read_until(text, seperator) -> str:
     out = ""
     for x in text:
         if x == seperator:
@@ -13,11 +13,11 @@ def read_until(text, seperator):
     return out
 
 
-def read_until_next_line(text):
+def read_until_next_line(text) -> str:
     return read_until(text, "\n")
 
 
-def parse_extension_data(data: str):
+def parse_extension_data(data: str) -> dict[str, str]:
     # data:
     # title="Test cook"
     # return {"title": "Test cook"}
@@ -94,7 +94,6 @@ def parse_cookmd(text: str):
                 )
                 done = True
             elif character == "[":
-                # This is a link!
                 link_text = read_until(text_left, "]")
 
                 output.append(
@@ -107,7 +106,6 @@ def parse_cookmd(text: str):
                 done = True
             elif character == "!":
                 if next_character == "[":
-                    # This is an image!
                     image_alt = read_until(line[2:], "]")
 
                     output.append(
@@ -122,7 +120,6 @@ def parse_cookmd(text: str):
             line = line.strip()
 
             if line.startswith("<!--"):
-                # This is a comment!
                 output.append(
                     {
                         "type": "comment",
@@ -162,13 +159,17 @@ def parse_cookmd(text: str):
                             else:
                                 saved_lines.append([amount, item])
                             recipe_contents_index += 1
+                        
+                        if recipe_contents_index % 2 == 1:
+                            raise CookMDSyntaxError(
+                                'Syntax error: unfinished element in <recipe>'
+                            )
                     if not save_lines:
                         output.append({"type": "recipe", "items": saved_lines})
                 else:
                     output.append(
                         {"type": "extension", "name": extension, "data": data}
                     )
-                    # print(f"Unrecognized extension: {extension}")
 
                 done = True
         if not done and not done_line and not save_lines:
@@ -177,6 +178,11 @@ def parse_cookmd(text: str):
                 done_line = True
         previous_character = character
         character_index += 1
+
+    if save_lines:
+        raise CookMDSyntaxError(
+            'Syntax error: <recipe> was not closed!'
+        )
 
     return output
 
