@@ -109,41 +109,41 @@ def parse_cookmd(text: str):
 
         if character == "\n":
             line_number += 1
+        if previous_character == "\n":
+            done = False
+            done_line = False
         if not done:
-            if previous_character == "\n":
-                done = False
-                done_line = False
-                if character == "#":
-                    size = len(read_until_exclude(text_left, "#"))
+            if character == "#":
+                size = len(read_until_exclude(text_left, "#"))
 
-                    output.append(
-                        {"type": "header", "text": line[size:].strip(), "size": size}
-                    )
-                    done = True
-                elif character == "[":
-                    link_text = read_until(text_left, "]")
+                output.append(
+                    {"type": "header", "text": line[size:].strip(), "size": size}
+                )
+                done = True
+            elif character == "[":
+                link_text = read_until(text_left, "]")
+
+                output.append(
+                    {
+                        "type": "link",
+                        "text": link_text[1:].strip(),
+                        "link": read_until(text_left[len(link_text) + 2 :], ")"),
+                    }
+                )
+                done = True
+            elif character == "!":
+                if next_character == "[":
+                    image_alt = read_until(line[2:], "]")
 
                     output.append(
                         {
-                            "type": "link",
-                            "text": link_text[1:].strip(),
-                            "link": read_until(text_left[len(link_text) + 2 :], ")"),
+                            "type": "image",
+                            "link": read_until(line[len(image_alt) + 4 :], ")"),
+                            "alt": image_alt,
                         }
                     )
                     done = True
-                elif character == "!":
-                    if next_character == "[":
-                        image_alt = read_until(line[2:], "]")
-
-                        output.append(
-                            {
-                                "type": "image",
-                                "link": read_until(line[len(image_alt) + 4 :], ")"),
-                                "alt": image_alt,
-                            }
-                        )
-                        done = True
-            if character == "<":
+            elif character == "<":
                 line = line.strip()
                 if not full_line.endswith(">"):
                     raise CookMDSyntaxError(
@@ -203,6 +203,7 @@ def parse_cookmd(text: str):
                         )
 
                     done = True
+
         if not done and not done_line and not save_lines:
             if full_line.strip() != "":
                 output.append({"type": "text", "text": full_line.strip()})

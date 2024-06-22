@@ -18,6 +18,12 @@ def controls(page: ft.Page):
     recipe = meal[1]
     for ingredient in recipe:
         ingredient: Ingredient = ingredient
+
+        def change_state(ev: ft.ControlEvent, done=False):
+            tile_control = ev.control.parent.parent.controls[0]
+            tile_control.trailing = ft.Icon(ft.icons.CHECK_BOX_OUTLINED if done else ft.icons.CHECK_BOX_OUTLINE_BLANK)
+            ev.page.update()
+
         page.add(
             ft.Card(
                 ft.Container(
@@ -31,8 +37,8 @@ def controls(page: ft.Page):
                             ),
                             ft.Row(
                                 [
-                                    ft.TextButton("Mark as done"),
-                                    ft.TextButton("Mark as absent")
+                                    ft.TextButton("Mark as done", on_click=lambda ev: change_state(ev, True)),
+                                    ft.TextButton("Mark as absent", on_click=lambda ev: change_state(ev, False))
                                 ],
                                 alignment=ft.MainAxisAlignment.END,
                             ),
